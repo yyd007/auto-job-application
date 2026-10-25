@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
+import { buildBatch } from "./batch";
 import { fixtureProfile } from "./fixture-profile";
 import { buildPlan } from "./plan";
 
@@ -97,6 +98,20 @@ describe("playwright runner", { concurrency: 1 }, () => {
     assert.equal(plan.mutated, false);
     assert.ok(plan.needsUser.some((answer) => answer.kind === "password"));
     assert.equal(plan.needsUser.every((answer) => answer.value === ""), true);
+  });
+
+  test("a batch continues after a profile wizard", { timeout: 60_000 }, async () => {
+    const batch = await buildBatch(
+      [`${origin}/fixtures/wizard-posting.html`, `${origin}/fixtures/posting.html`],
+      fixtureProfile,
+    );
+    assert.equal(batch.items.length, 2);
+    assert.equal(batch.profileWizards, 1);
+    assert.equal(batch.reachedForm, 1);
+    assert.equal(batch.submitted, false);
+    assert.equal(batch.items[0]?.plan?.stoppedBecause, "wizard-diversion");
+    assert.equal(batch.items[1]?.plan?.applicationReached, true);
+    assert.ok(batch.gaps.some((gap) => gap.label === "Expected pay" && gap.count === 1));
   });
 
   test("reads a form that is already open and ignores submit", { timeout: 60_000 }, async () => {

@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start -H 0.0.0.0 -p 4721",
     "lint": "eslint",
-    "test": "tsx --test src/lib/propose.test.ts src/lib/url-hint.test.ts src/lib/extract.test.ts",
+    "test": "tsx --test src/lib/propose.test.ts src/lib/url-hint.test.ts src/lib/batch.test.ts src/lib/extract.test.ts",
     "extract": "tsx scripts/extract-form.ts"
   },
   "dependencies": {

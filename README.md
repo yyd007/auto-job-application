@@ -42,6 +42,12 @@ npm run extract -- https://example.com/jobs/123
 
 Prints a JSON plan. Exit 0 means the application form was read and every required field has a proposed answer. Exit 2 means it stopped: something is missing, needs you, hit a login wall, or landed on a profile wizard. Exit 1 means it did not finish. The command does not submit.
 
+Several URLs, one per line, are planned as a batch. A login wall or a profile wizard stops that URL only. Repeated gaps are listed once.
+
+```bash
+npm run extract -- https://example.com/jobs/1 https://example.com/jobs/2
+```
+
 ## Tests
 
 ```bash
