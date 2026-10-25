@@ -35,7 +35,6 @@ export type Extraction = {
   hops: Hop[];
   stoppedBecause: StopReason;
   warnings: string[];
-  roleInChina: boolean | null;
   questions: ExtractedQuestion[];
   submitted: boolean;
   mutated: boolean;
@@ -61,7 +60,6 @@ export type ApplicationPlan = {
   hops: Hop[];
   pageTitle: string;
   finalUrl: string;
-  roleInChina: boolean | null;
   answers: ProposedAnswer[];
   missing: ProposedAnswer[];
   needsUser: ProposedAnswer[];

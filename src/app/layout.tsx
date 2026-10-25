@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "投递计划",
-  description: "对照简历拟出一份职位申请的答案。不填写，不提交。",
+  title: "Application plan",
+  description: "Read a job URL, propose answers from a local profile, and do not submit.",
 };
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="en">
       <body className="antialiased">{children}</body>
     </html>
   );

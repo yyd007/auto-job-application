@@ -112,25 +112,9 @@ async function followApply(page: Page, control: Locator): Promise<Page> {
 }
 
 function isWizard(url: string, title: string, heading: string): boolean {
-  let host = "";
-  try {
-    host = new URL(url).hostname.toLowerCase();
-  } catch {
-    host = "";
-  }
-  const onWaiqi = /(^|\.)waiqi\.com$/.test(host);
-  const pathHit = /user-info|userinfo/i.test(url);
-  const copyHit = /完善个人信息|完善简历|神仙外企/.test(`${title} ${heading}`);
-  if (onWaiqi && (pathHit || copyHit)) return true;
-  return pathHit && copyHit;
-}
-
-function roleInChina(url: string, sample: string): boolean | null {
-  if (/\/zh-cn(\/|$)/i.test(url) || /中国|上海|北京|深圳|广州|杭州|成都|china|shanghai|beijing|shenzhen|greater china/i.test(sample)) {
-    return true;
-  }
-  if (/united states|\busa\b|united kingdom|london|singapore|新加坡|欧洲/i.test(sample)) return false;
-  return null;
+  const pathHit = /user-info|userinfo|complete-profile|complete-your-profile/i.test(url);
+  const copyHit = /完善个人信息|完善简历|complete your profile|complete your resume|profile wizard/i.test(`${title} ${heading}`);
+  return pathHit || copyHit;
 }
 
 async function pageFlags(page: Page): Promise<{ submitted: boolean; mutated: boolean }> {
@@ -140,19 +124,24 @@ async function pageFlags(page: Page): Promise<{ submitted: boolean; mutated: boo
 }
 
 /**
- * Opens a job URL, follows 立即投递 or the employer apply button, and reads
- * the visible questions. It does not type and it does not submit.
+ * Opens a job URL, follows a visible apply control, and reads the visible
+ * questions. It does not type and it does not submit.
  */
-export async function extractForm(startUrl: string): Promise<Extraction> {
+function browserLocale(preferred: string): string {
+  const value = preferred.trim();
+  return /^[a-zA-Z]{2,3}([_-][a-zA-Z0-9]{2,8})*$/.test(value) ? value : "en-US";
+}
+
+export async function extractForm(startUrl: string, preferredLocale = ""): Promise<Extraction> {
   const browser = await chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   }).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : "";
     if (/executable|browserType\.launch/i.test(message)) {
-      throw new PlanError("没有找到 Playwright Chromium。先运行 npx playwright install chromium。");
+      throw new PlanError("Playwright Chromium is not installed. Run npx playwright install chromium.");
     }
-    throw new PlanError("浏览器没有启动。页面没有提交。");
+    throw new PlanError("The browser did not start. Nothing was submitted.");
   });
 
   const hops: Hop[] = [];
@@ -162,7 +151,7 @@ export async function extractForm(startUrl: string): Promise<Extraction> {
 
   try {
     const context = await browser.newContext({
-      locale: "zh-CN",
+      locale: browserLocale(preferredLocale),
       viewport: { width: 1280, height: 900 },
     });
     await context.addInitScript(`
@@ -182,7 +171,7 @@ export async function extractForm(startUrl: string): Promise<Extraction> {
     try {
       await page.goto(startUrl, { waitUntil: "domcontentloaded", timeout: 25000 });
     } catch {
-      throw new PlanError("页面没有打开。检查链接，或稍后再试。");
+      throw new PlanError("The page did not open. Check the link and try again.");
     }
     await settle(page);
 
@@ -190,30 +179,26 @@ export async function extractForm(startUrl: string): Promise<Extraction> {
     let questions: ExtractedQuestion[] = [];
     let pageTitle = "";
     let heading = "";
-    let sample = "";
 
     for (let hop = 0; hop < MAX_HOPS; hop += 1) {
       pageTitle = await page.title();
       heading = await page.locator("h1").first().innerText().catch(() => "");
-      const body = await page.locator("body").innerText().catch(() => "");
-      sample = `${pageTitle}\n${heading}\n${body}`.slice(0, 4000);
       questions = await readQuestions(page);
       const flags = await pageFlags(page);
       submitted = submitted || flags.submitted;
       mutated = mutated || flags.mutated;
-      if (hop === 0) hops.push({ url: page.url(), action: "打开这个链接" });
+      if (hop === 0) hops.push({ url: page.url(), action: "Opened this link" });
 
       if (isWizard(page.url(), pageTitle, heading)) {
         stoppedBecause = "wizard-diversion";
-        warnings.push("停住了。这是神仙外企的资料向导（/user-info 一类），不是这份职位的申请。");
+        warnings.push("Stopped. This page is a profile wizard, not the job application.");
         break;
       }
 
       const passwordVisible = questions.some((question) => question.kind === "password");
-      const loginCopy = /登录|sign in|log in|apple id|密码/i.test(`${pageTitle} ${heading}`);
-      if (passwordVisible && loginCopy) {
+      if (passwordVisible) {
         stoppedBecause = "auth-wall";
-        warnings.push("停住了。这是登录页。不会填写密码、验证码或账号。");
+        warnings.push("Stopped. This is a login page. Passwords and codes are not filled in.");
         break;
       }
 
@@ -221,13 +206,11 @@ export async function extractForm(startUrl: string): Promise<Extraction> {
       const fieldCount = questions.filter((question) => question.kind !== "password").length;
       if (!apply || fieldCount >= 3) {
         stoppedBecause = fieldCount > 0 ? "form" : "no-apply-control";
-        if (fieldCount === 0) warnings.push("这一页没有找到申请表，也没有可跟随的「立即投递」或申请按钮。");
+        if (fieldCount === 0) warnings.push("No application form and no apply control on this page.");
         break;
       }
 
-      const action = clean(apply.label) === "立即投递"
-        ? "点击「立即投递」。这一步应该离开帖子，进入雇主的申请页。"
-        : `点击「${apply.label}」。`;
+      const action = `Followed “${apply.label}”.`;
       const previous = page.url();
       page = await followApply(page, apply.locator);
       const flagsAfter = await pageFlags(page);
@@ -237,7 +220,7 @@ export async function extractForm(startUrl: string): Promise<Extraction> {
       if (page.url() === previous) {
         const appeared = await readQuestions(page);
         if (appeared.length < 3) {
-          warnings.push("点了申请按钮，但页面没有进入新的申请表。");
+          warnings.push("The apply control did not open a new form.");
           questions = appeared;
           stoppedBecause = appeared.length > 0 ? "form" : "no-apply-control";
           break;
@@ -246,7 +229,7 @@ export async function extractForm(startUrl: string): Promise<Extraction> {
       if (hop === MAX_HOPS - 1) {
         stoppedBecause = "max-hops";
         questions = await readQuestions(page);
-        warnings.push("已经跟随了申请按钮，但还没停在一张稳定的表上。没有继续点。");
+        warnings.push("Followed apply controls several times without reaching a stable form. Stopped.");
       }
     }
 
@@ -254,8 +237,8 @@ export async function extractForm(startUrl: string): Promise<Extraction> {
     const flags = await pageFlags(page);
     submitted = submitted || flags.submitted;
     mutated = mutated || flags.mutated;
-    if (submitted) warnings.unshift("运行器触发了提交。这违反规则，不要使用这份结果。");
-    if (mutated) warnings.unshift("页面出现了输入。运行器不应该打字。不要使用这份结果。");
+    if (submitted) warnings.unshift("A submit event fired. Do not use this result.");
+    if (mutated) warnings.unshift("The page received input. The runner does not type. Do not use this result.");
 
     return {
       startUrl,
@@ -264,7 +247,6 @@ export async function extractForm(startUrl: string): Promise<Extraction> {
       hops,
       stoppedBecause,
       warnings,
-      roleInChina: roleInChina(page.url(), sample),
       questions,
       submitted,
       mutated,

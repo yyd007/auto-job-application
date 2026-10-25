@@ -1,10 +1,28 @@
-# 投递计划
+# Application plan
 
-给一个职位链接，生成一份申请计划。它会打开页面，跟着「立即投递」或公司的申请按钮走到表单，对照戴杨阳的简历和已确认资料列出拟填答案，并把资料里没有的必填项标成缺失。
+Paste a job URL. The app opens the page, follows a visible apply control, reads the questions it can see, and proposes answers from a profile file on this machine. Required questions that are not in that file are marked missing.
 
-它不往表单里打字，也不提交。
+It does not type into the form, and it does not submit.
 
-## 本地运行
+## Local profile
+
+Copy the template and edit it on your machine:
+
+```bash
+cp src/data/profile.template.json profile.local.json
+```
+
+`profile.local.json` is gitignored. Do not commit it. If the file is missing, the app uses the placeholder template (`Your name`, and the other `Your …` values). Replace those placeholders before you rely on a plan.
+
+Location, language, work authorization, and every other fact belong in that file. The app does not guess a required answer that is missing from it, and it does not ship a filled-in profile.
+
+For a language entry, set `level` to `highest-on-form` to use the strongest proficiency that control actually lists, or set a literal value. `browserLocale` is an optional BCP 47 tag such as `en-US`. Leave it blank to open pages in `en-US`.
+
+`customAnswers` fills a question only when its label contains every phrase in `labelIncludes`.
+
+`answerLanguage`, when set, is only a reminder on the plan. It does not change the answers by itself.
+
+## Run
 
 ```bash
 npm install
@@ -12,37 +30,36 @@ npx playwright install chromium
 npm run dev
 ```
 
-打开 [http://127.0.0.1:4721](http://127.0.0.1:4721)。
+Open [http://127.0.0.1:4721](http://127.0.0.1:4721).
 
-页面上的「本地示例」用仓库里的静态表单走一遍路径，不会访问公司网站。
+The sample links on the page use static fixtures in this repo. They do not contact an employer.
 
-## 命令行
+## Command line
 
 ```bash
 npm run extract -- https://example.com/jobs/123
 ```
 
-标准输出是一份 JSON 计划。退出码 0 表示已经读到申请表，且每个必填项都有拟填答案。退出码 2 表示停住了：有缺失项、需要本人处理、登录墙，或落到了资料向导。退出码 1 表示没有跑成。
+Prints a JSON plan. Exit 0 means the application form was read and every required field has a proposed answer. Exit 2 means it stopped: something is missing, needs you, hit a login wall, or landed on a profile wizard. Exit 1 means it did not finish. The command does not submit.
 
-这条命令也不会提交。
-
-## 测试
+## Tests
 
 ```bash
 npm test
 ```
 
-## 这一版做什么
+## What this version does
 
-- 从你给的链接开始。`waiqi.com` 上点击「立即投递」，并期望离开帖子。
-- 如果落到神仙外企的 `/user-info` 资料向导，就停，不把向导当成申请。
-- 读取当时看得见的问题，用简历原文和已确认资料拟答案。
-- 中国职位用中文。工作描述用该段全文。技能用整段专业技能。英语选表单里的最高档。
-- 必填但资料里没有的，标成缺失。
+- Starts from the URL you provide.
+- Follows a visible apply control, and stops at a login wall.
+- Stops if the flow becomes a profile wizard instead of the job application.
+- Proposes answers only from the local profile. When a role or the skills section matches, it uses the full text stored there.
+- Leaves an email that is already verified or filled in on the page unchanged.
+- Marks any other required field missing.
 
-## 这一版不做什么
+## What it does not do
 
-- 不填写表单，不点「提交」「提交申请」或 Submit。
-- 不猜简历和已确认资料里没有的答案。
-- 不保存密码、短信验证码或 Apple 登录凭据。站点上已经验证的邮箱保持不动。
-- 不在同一次登录会话里自动填完并提交。确认之后，那一步仍要人工做。
+- Does not fill the form, and does not click Submit.
+- Does not guess.
+- Does not store passwords or one-time codes.
+- Does not submit after you confirm. That step stays manual, in the same signed-in session, because sites time out.

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
+import { fixtureProfile } from "./fixture-profile";
 import { buildPlan } from "./plan";
 
 const root = path.join(process.cwd(), "public");
@@ -39,46 +40,44 @@ after(() => {
 });
 
 describe("playwright runner", { concurrency: 1 }, () => {
-  test("follows 立即投递, proposes answers, and does not submit", { timeout: 60_000 }, async () => {
-    const plan = await buildPlan(`${origin}/fixtures/posting.html`);
+  test("follows an apply control, proposes answers, and does not submit", { timeout: 60_000 }, async () => {
+    const plan = await buildPlan(`${origin}/fixtures/posting.html`, fixtureProfile);
     assert.equal(plan.submitted, false);
     assert.equal(plan.mutated, false);
     assert.equal(plan.applicationReached, true);
     assert.equal(plan.stoppedBecause, "form");
-    assert.equal(plan.roleInChina, true);
     assert.match(plan.finalUrl, /form\.html$/);
     assert.doesNotMatch(plan.finalUrl, /thanks\.html/);
-    assert.ok(plan.hops.some((hop) => hop.action.includes("立即投递")));
+    assert.ok(plan.hops.some((hop) => hop.action.includes("Apply now")));
 
-    const family = plan.answers.find((answer) => answer.label === "姓氏");
-    const skills = plan.answers.find((answer) => answer.label === "技能");
-    const ebest = plan.answers.find((answer) => answer.label.includes("eBest"));
-    const english = plan.answers.find((answer) => answer.label === "英语熟练程度");
-    const salary = plan.answers.find((answer) => answer.label.includes("期望薪资"));
-    const district = plan.answers.find((answer) => answer.label.startsWith("区"));
-    const verified = plan.answers.find((answer) => answer.label.includes("首选电子"));
+    const family = plan.answers.find((answer) => answer.label === "Last name");
+    const skills = plan.answers.find((answer) => answer.label === "Skills");
+    const role = plan.answers.find((answer) => answer.label.includes("Your employer"));
+    const language = plan.answers.find((answer) => answer.label === "Your language proficiency");
+    const pay = plan.answers.find((answer) => answer.label === "Expected pay");
+    const district = plan.answers.find((answer) => answer.label.startsWith("District"));
+    const verified = plan.answers.find((answer) => answer.label.includes("Preferred email"));
 
-    assert.equal(family?.value, "戴");
-    assert.match(skills?.value ?? "", /PMP认证/);
-    assert.match(skills?.value ?? "", /Snowflake/);
-    assert.match(ebest?.value ?? "", /高流失风险门店/);
-    assert.equal(english?.value, "流利");
-    assert.equal(salary?.status, "missing");
-    assert.ok(plan.missing.some((answer) => answer.label.includes("期望薪资")));
+    assert.equal(family?.value, "Your family name");
+    assert.equal(skills?.value, "Your full skills section.");
+    assert.equal(role?.value, "Your full job description for this role.");
+    assert.equal(language?.value, "Fluent");
+    assert.equal(pay?.status, "missing");
+    assert.ok(plan.missing.some((answer) => answer.label === "Expected pay"));
     assert.equal(district?.status, "unmapped");
     assert.equal(verified?.status, "leave-verified");
   });
 
-  test("follows 提交简历 on an employer posting and still does not submit", { timeout: 60_000 }, async () => {
-    const plan = await buildPlan(`${origin}/fixtures/employer-posting.html`);
+  test("follows a non-english apply control and still does not submit", { timeout: 60_000 }, async () => {
+    const plan = await buildPlan(`${origin}/fixtures/employer-posting.html`, fixtureProfile);
     assert.equal(plan.submitted, false);
     assert.match(plan.finalUrl, /form\.html$/);
-    assert.ok(plan.hops.some((hop) => hop.action.includes("提交简历")));
-    assert.equal(plan.answers.find((answer) => answer.label === "名字")?.value, "杨阳");
+    assert.ok(plan.hops.some((hop) => hop.action.includes("立即申请")));
+    assert.equal(plan.answers.find((answer) => answer.label === "First name")?.value, "Your given name");
   });
 
-  test("stops when 立即投递 lands on a profile wizard", { timeout: 60_000 }, async () => {
-    const plan = await buildPlan(`${origin}/fixtures/wizard-posting.html`);
+  test("stops when apply lands on a profile wizard", { timeout: 60_000 }, async () => {
+    const plan = await buildPlan(`${origin}/fixtures/wizard-posting.html`, fixtureProfile);
     assert.equal(plan.stoppedBecause, "wizard-diversion");
     assert.equal(plan.applicationReached, false);
     assert.equal(plan.submitted, false);
@@ -86,12 +85,12 @@ describe("playwright runner", { concurrency: 1 }, () => {
     assert.equal(plan.answers.length, 0);
     assert.doesNotMatch(plan.finalUrl, /thanks\.html/);
     assert.match(plan.finalUrl, /user-info/);
-    assert.ok(plan.seenLabels.some((label) => label.includes("微信号")));
-    assert.match(plan.warnings.join(" "), /向导/);
+    assert.ok(plan.seenLabels.some((label) => label.includes("Display name")));
+    assert.match(plan.warnings.join(" "), /profile wizard/i);
   });
 
   test("stops on a login wall without typing", { timeout: 60_000 }, async () => {
-    const plan = await buildPlan(`${origin}/fixtures/login.html`);
+    const plan = await buildPlan(`${origin}/fixtures/login.html`, fixtureProfile);
     assert.equal(plan.stoppedBecause, "auth-wall");
     assert.equal(plan.applicationReached, false);
     assert.equal(plan.submitted, false);
@@ -100,11 +99,11 @@ describe("playwright runner", { concurrency: 1 }, () => {
     assert.equal(plan.needsUser.every((answer) => answer.value === ""), true);
   });
 
-  test("reads a form that is already open and ignores 提交申请", { timeout: 60_000 }, async () => {
-    const plan = await buildPlan(`${origin}/fixtures/form.html`);
+  test("reads a form that is already open and ignores submit", { timeout: 60_000 }, async () => {
+    const plan = await buildPlan(`${origin}/fixtures/form.html`, fixtureProfile);
     assert.equal(plan.hops.length, 1);
     assert.match(plan.finalUrl, /form\.html$/);
     assert.equal(plan.submitted, false);
-    assert.equal(plan.answers.find((answer) => answer.label === "性别")?.value, "女");
+    assert.equal(plan.answers.find((answer) => answer.label === "Gender")?.value, "Your gender");
   });
 });

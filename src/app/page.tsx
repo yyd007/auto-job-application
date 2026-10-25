@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { Planner } from "@/components/planner";
+import { loadProfile } from "@/data/load-profile";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "投递计划",
-  description: "对照简历拟出一份职位申请的答案。不填写，不提交。",
+  title: "Application plan",
+  description: "Read a job URL, propose answers from a local profile, and do not submit.",
 };
 
 export default function Home() {
-  return <Planner />;
+  const loaded = loadProfile();
+  return <Planner profile={loaded.profile} profileSource={loaded.source} />;
 }

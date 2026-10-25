@@ -140,7 +140,7 @@ function scrapeQuestions() {
 
   for (const el of fields) {
     const type = (el.getAttribute("type") || el.tagName).toLowerCase();
-    const label = fieldLabel(el) || el.name || "(未命名字段)";
+    const label = fieldLabel(el) || el.name || "(unlabeled field)";
     let kind = "text";
     if (el.tagName === "TEXTAREA") kind = "textarea";
     else if (el.tagName === "SELECT") kind = "select";

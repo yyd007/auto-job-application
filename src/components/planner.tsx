@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { profile } from "@/data/profile";
+import type { Profile, ProfileSource } from "@/data/profile-types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,11 @@ import type { AnswerStatus, ApplicationPlan, ProposedAnswer } from "@/lib/types"
 import { hintForUrl } from "@/lib/url-hint";
 
 const STATUS_LABEL: Record<AnswerStatus, string> = {
-  proposed: "拟填",
-  "leave-verified": "保持原样",
-  missing: "缺失",
-  unmapped: "留空",
-  "needs-user": "要你处理",
+  proposed: "Proposed",
+  "leave-verified": "Leave as-is",
+  missing: "Missing",
+  unmapped: "Leave blank",
+  "needs-user": "Needs you",
 };
 
 function statusVariant(status: AnswerStatus): "default" | "secondary" | "destructive" | "outline" {
@@ -27,13 +27,17 @@ function statusVariant(status: AnswerStatus): "default" | "secondary" | "destruc
   return "default";
 }
 
+function shown(value: string): string {
+  return value.trim() ? value : "Not set";
+}
+
 function AnswerBlock({ item }: { item: ProposedAnswer }) {
   const showValue = item.status === "proposed" || item.status === "leave-verified";
   return (
     <div className="grid gap-2 border-b border-border/80 py-4 last:border-b-0">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={statusVariant(item.status)}>{STATUS_LABEL[item.status]}</Badge>
-        {item.required ? <Badge variant="outline">必填</Badge> : <Badge variant="secondary">可选</Badge>}
+        {item.required ? <Badge variant="outline">Required</Badge> : <Badge variant="secondary">Optional</Badge>}
         <h3 className="text-sm font-medium">{item.label}</h3>
       </div>
       {showValue ? (
@@ -46,7 +50,7 @@ function AnswerBlock({ item }: { item: ProposedAnswer }) {
   );
 }
 
-export function Planner() {
+export function Planner({ profile, profileSource }: { profile: Profile; profileSource: ProfileSource }) {
   const [url, setUrl] = useState("");
   const [origin, setOrigin] = useState("");
   const [loading, setLoading] = useState(false);
@@ -74,11 +78,11 @@ export function Planner() {
       });
       const data = (await response.json()) as ApplicationPlan & { error?: string };
       if (!response.ok) {
-        throw new Error(data.error || "生成计划失败。");
+        throw new Error(data.error || "Could not build a plan.");
       }
       setPlan(data);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "生成计划失败。");
+      setError(caught instanceof Error ? caught.message : "Could not build a plan.");
     } finally {
       setLoading(false);
     }
@@ -89,13 +93,11 @@ export function Planner() {
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-end sm:justify-between sm:px-6">
           <div>
-            <p className="text-xs font-medium tracking-[0.22em] text-muted-foreground">不填写 · 不提交</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">投递计划</h1>
+            <p className="text-xs font-medium tracking-[0.22em] text-muted-foreground">Does not fill. Does not submit.</p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Application plan</h1>
           </div>
-          <p className="text-sm text-muted-foreground sm:text-right">
-            {profile.name.full}（{profile.name.english}）
-            <br />
-            {profile.location.city} {profile.location.postalCode}
+          <p className="max-w-sm text-sm text-muted-foreground sm:text-right">
+            Paste a job URL. Answers come from a profile file on this machine.
           </p>
         </div>
       </header>
@@ -104,16 +106,16 @@ export function Planner() {
         <div className="grid gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>职位链接</CardTitle>
+              <CardTitle>Job URL</CardTitle>
               <CardDescription>
-                贴上要投的那一页。工具会打开它，跟着「立即投递」或公司的申请按钮走到表单，对照简历列出拟填答案和缺失的必填项。
+                Paste the page you want to apply from. The planner opens it, follows a visible apply control, and lists proposed answers and missing required fields.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                 <div className="grid gap-2">
                   <label htmlFor="job-url" className="text-sm font-medium">
-                    职位链接
+                    Job URL
                   </label>
                   <Input
                     id="job-url"
@@ -121,7 +123,7 @@ export function Planner() {
                     type="url"
                     inputMode="url"
                     autoComplete="off"
-                    placeholder="https://jobs.apple.com/zh-cn/details/…"
+                    placeholder="https://example.com/jobs/123"
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
                     className="h-11 md:text-base"
@@ -129,7 +131,7 @@ export function Planner() {
                   />
                 </div>
                 <Button type="submit" data-testid="build-plan" disabled={loading || !url.trim()} className="h-11 sm:mt-7">
-                  {loading ? "正在打开…" : "生成计划"}
+                  {loading ? "Opening…" : "Build plan"}
                 </Button>
               </form>
 
@@ -142,14 +144,9 @@ export function Planner() {
 
               {origin ? (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-muted-foreground">本地示例</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setUrl(`${origin}/fixtures/posting.html`)}
-                  >
-                    立即投递
+                  <span className="text-xs text-muted-foreground">Local samples</span>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setUrl(`${origin}/fixtures/posting.html`)}>
+                    Apply control
                   </Button>
                   <Button
                     type="button"
@@ -157,7 +154,7 @@ export function Planner() {
                     size="sm"
                     onClick={() => setUrl(`${origin}/fixtures/employer-posting.html`)}
                   >
-                    提交简历
+                    Another apply control
                   </Button>
                   <Button
                     type="button"
@@ -165,19 +162,19 @@ export function Planner() {
                     size="sm"
                     onClick={() => setUrl(`${origin}/fixtures/wizard-posting.html`)}
                   >
-                    资料向导（应停住）
+                    Profile wizard (should stop)
                   </Button>
                 </div>
               ) : null}
 
               {loading ? (
                 <p className="text-sm text-muted-foreground" data-testid="loading">
-                  正在打开页面并读取看得见的问题。不会往表单里打字，也不会点提交。
+                  Opening the page and reading the visible questions. It does not type into the form and it does not submit.
                 </p>
               ) : null}
               {error ? (
                 <Alert variant="destructive" data-testid="error">
-                  <AlertTitle>没有生成计划</AlertTitle>
+                  <AlertTitle>No plan</AlertTitle>
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               ) : null}
@@ -190,26 +187,36 @@ export function Planner() {
         <aside className="grid content-start gap-4">
           <Card size="sm">
             <CardHeader>
-              <CardTitle>已确认资料</CardTitle>
-              <CardDescription>申请表上用这些。简历邮箱如果在站点上已验证，就保持不动。</CardDescription>
+              <CardTitle>Local profile</CardTitle>
+              <CardDescription>
+                {profileSource === "local"
+                  ? "Loaded from profile.local.json on this machine. That file is not committed."
+                  : "Showing the placeholder template. Copy it to profile.local.json and edit it locally. That file is not committed."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-2 text-sm">
-              <Fact label="姓名" value={`${profile.name.family} / ${profile.name.given}`} />
-              <Fact label="电话" value={profile.phone} />
-              <Fact label="邮箱" value={profile.email} />
-              <Fact label="地址" value={`${profile.location.province} / ${profile.location.city} / ${profile.location.postalCode}`} />
-              <Fact label="性别" value={profile.gender} />
-              <Fact label="年满 18 岁" value={profile.atLeast18} />
-              <Fact label="合法工作许可" value={profile.workAuthorization} />
-              <Fact label="签证担保" value={profile.needsVisaSponsorship} />
-              <Fact label="曾受雇于 Apple" value={profile.everEmployedByApple} />
-              <Fact label="Apple 派遣或合同工" value={profile.everAppleContractor} />
+              <Fact label="Name" value={shown(profile.name.full)} />
+              <Fact label="Phone" value={shown(profile.phone)} />
+              <Fact label="Email" value={shown(profile.email)} />
+              <Fact
+                label="Location"
+                value={shown(
+                  [profile.location.country, profile.location.region, profile.location.city, profile.location.postalCode]
+                    .filter((part) => part.trim())
+                    .join(" / "),
+                )}
+              />
+              <Fact label="Gender" value={shown(profile.gender)} />
+              <Fact label="At least 18" value={shown(profile.atLeast18)} />
+              <Fact label="Work authorization" value={shown(profile.workAuthorization)} />
+              <Fact label="Visa sponsorship" value={shown(profile.needsVisaSponsorship)} />
+              <Fact label="Answer language" value={shown(profile.answerLanguage)} />
             </CardContent>
           </Card>
           <Card size="sm">
             <CardHeader>
-              <CardTitle>资料里没有</CardTitle>
-              <CardDescription>必填时标成缺失，先问你。</CardDescription>
+              <CardTitle>Not in the profile</CardTitle>
+              <CardDescription>Required fields like these are marked missing. They are not guessed.</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="grid gap-1 text-sm text-muted-foreground">
@@ -238,8 +245,8 @@ function RulesAndEmpty() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>怎么用这份计划</CardTitle>
-        <CardDescription>先看缺失项。缺了就停下来问，不要猜，也不要提交。</CardDescription>
+        <CardTitle>How a plan is used</CardTitle>
+        <CardDescription>Read the missing fields first. If one is missing, ask. Do not guess, and do not submit.</CardDescription>
       </CardHeader>
       <CardContent>
         <ol className="list-decimal space-y-3 pl-5 text-sm leading-6">
@@ -265,8 +272,8 @@ function PlanView({
     <div className="grid gap-6" data-testid="plan">
       <Card>
         <CardHeader>
-          <CardTitle>申请路径</CardTitle>
-          <CardDescription>{plan.pageTitle || "已打开页面"}</CardDescription>
+          <CardTitle>Path</CardTitle>
+          <CardDescription>{plan.pageTitle || "Page opened"}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           <ol className="grid gap-3" data-testid="path">
@@ -283,13 +290,13 @@ function PlanView({
           </ol>
           {plan.warnings.map((warning) => (
             <Alert key={warning} variant={plan.stoppedBecause === "wizard-diversion" ? "destructive" : "default"}>
-              <AlertTitle>{plan.stoppedBecause === "wizard-diversion" ? "停住" : "注意"}</AlertTitle>
+              <AlertTitle>{plan.stoppedBecause === "wizard-diversion" ? "Stopped" : "Note"}</AlertTitle>
               <AlertDescription>{warning}</AlertDescription>
             </Alert>
           ))}
           {plan.stoppedBecause === "wizard-diversion" ? (
             <div data-testid="wizard-stop">
-              <p className="text-sm">向导上的问题没有拟填：</p>
+              <p className="text-sm">No answers were proposed for this wizard:</p>
               <ul className="mt-2 grid gap-1 text-sm text-muted-foreground">
                 {plan.seenLabels.map((label) => (
                   <li key={label}>{label}</li>
@@ -300,20 +307,22 @@ function PlanView({
           <Separator />
           <p className="text-sm text-muted-foreground">
             {plan.applicationReached
-              ? "已经读到申请表。下面是拟填答案，不是已经填进去的内容。"
-              : "还没有进入这份职位的申请表。"}
-            {plan.submitted || plan.mutated ? " 运行器改动了页面，这份结果不能用。" : " 运行器没有打字，也没有提交。"}
+              ? "The application form was read. These are proposed answers, not values typed into the page."
+              : "This is not the job application yet."}
+            {plan.submitted || plan.mutated
+              ? " The runner changed the page. Do not use this result."
+              : " The runner did not type and did not submit."}
           </p>
         </CardContent>
       </Card>
 
       <Card data-testid="missing" className={plan.missing.length ? "ring-destructive/40" : undefined}>
         <CardHeader>
-          <CardTitle>缺失的必填项</CardTitle>
+          <CardTitle>Missing required fields</CardTitle>
           <CardDescription>
             {plan.missing.length
-              ? "简历和已确认资料里没有这些。先问，得到答案之前不要投。"
-              : "没有发现对不上的必填项。这一版仍然不会提交。"}
+              ? "These required fields are not in the local profile. Ask before you apply. Nothing was guessed."
+              : "No required field was left unmatched. This version still does not submit."}
           </CardDescription>
         </CardHeader>
         {plan.missing.length ? (
@@ -328,8 +337,8 @@ function PlanView({
       {plan.needsUser.length ? (
         <Card data-testid="needs-user">
           <CardHeader>
-            <CardTitle>需要你本人处理</CardTitle>
-            <CardDescription>登录、验证码、条款和简历原件都不代办。</CardDescription>
+            <CardTitle>Needs you</CardTitle>
+            <CardDescription>Login, codes, terms, and the resume file stay with you.</CardDescription>
           </CardHeader>
           <CardContent>
             {plan.needsUser.map((item) => (
@@ -342,8 +351,8 @@ function PlanView({
       {proposed.length ? (
         <Card data-testid="answers">
           <CardHeader>
-            <CardTitle>拟填答案</CardTitle>
-            <CardDescription>中国职位用中文。工作描述和技能都是简历原文。</CardDescription>
+            <CardTitle>Proposed answers</CardTitle>
+            <CardDescription>Copied from the local profile. Role descriptions and skills are the full text on file.</CardDescription>
           </CardHeader>
           <CardContent>
             {proposed.map((item) => (
@@ -355,7 +364,7 @@ function PlanView({
 
       {unmapped.length ? (
         <details className="rounded-xl bg-card px-4 py-3 text-sm ring-1 ring-foreground/10">
-          <summary className="cursor-pointer font-medium">可选、资料里没有（{unmapped.length}）</summary>
+          <summary className="cursor-pointer font-medium">Optional and not in the profile ({unmapped.length})</summary>
           <div className="mt-2">
             {unmapped.map((item) => (
               <AnswerBlock key={item.id} item={item} />

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { loadProfile } from "@/data/load-profile";
 import { PlanError } from "@/lib/errors";
 import { buildPlan } from "@/lib/plan";
 
@@ -12,17 +13,17 @@ export async function POST(request: Request) {
     const body = (await request.json()) as { url?: unknown };
     raw = typeof body.url === "string" ? body.url : "";
   } catch {
-    return NextResponse.json({ error: "请贴上职位链接。" }, { status: 400 });
+    return NextResponse.json({ error: "Paste a job URL." }, { status: 400 });
   }
 
   try {
-    const plan = await buildPlan(raw);
+    const plan = await buildPlan(raw, loadProfile().profile);
     return NextResponse.json(plan);
   } catch (error) {
     if (error instanceof PlanError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error(error);
-    return NextResponse.json({ error: "生成计划失败。页面没有提交。" }, { status: 500 });
+    return NextResponse.json({ error: "Could not build a plan. Nothing was submitted." }, { status: 500 });
   }
 }

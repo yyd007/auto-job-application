@@ -1,13 +1,14 @@
+import { loadProfile } from "../src/data/load-profile";
 import { buildPlan } from "../src/lib/plan";
 
 const url = process.argv[2];
 
 if (!url) {
-  console.error("用法: npm run extract -- <职位链接>");
+  console.error("Usage: npm run extract -- <job url>");
   process.exit(1);
 }
 
-buildPlan(url)
+buildPlan(url, loadProfile().profile)
   .then((plan) => {
     console.log(JSON.stringify(plan, null, 2));
     if (plan.submitted || plan.mutated) process.exit(1);
@@ -16,6 +17,6 @@ buildPlan(url)
     }
   })
   .catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : "生成计划失败。");
+    console.error(error instanceof Error ? error.message : "Could not build a plan.");
     process.exit(1);
   });

@@ -2,25 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { hintForUrl } from "./url-hint";
 
-test("waiqi links are aggregator pages, not the application", () => {
-  const hint = hintForUrl("https://www.waiqi.com/job/271282");
+test("a job link is opened without a site-specific path", () => {
+  const hint = hintForUrl("https://example.com/jobs/123");
   assert.equal(hint.ok, true);
-  assert.match(hint.detail, /立即投递/);
-  assert.match(hint.detail, /user-info/);
+  assert.match(hint.detail, /apply/i);
+  assert.match(hint.detail, /does not submit/i);
 });
 
-test("apple job links stay on the employer apply flow", () => {
-  const hint = hintForUrl("https://jobs.apple.com/zh-cn/details/200688123-3715/measurement-strategist");
+test("a profile path is not treated as the application", () => {
+  const hint = hintForUrl("https://example.com/user-info");
   assert.equal(hint.ok, true);
-  assert.match(hint.detail, /提交简历/);
-  assert.match(hint.detail, /验证/);
-});
-
-test("a user-info link is not treated as the application", () => {
-  const hint = hintForUrl("https://www.waiqi.com/user-info");
-  assert.equal(hint.ok, true);
-  assert.match(hint.headline, /向导/);
-  assert.match(hint.detail, /user-info/);
+  assert.match(hint.headline, /profile wizard/i);
+  assert.match(hint.detail, /not be treated as the job application/i);
 });
 
 test("rejects non-http urls", () => {

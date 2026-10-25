@@ -1,0 +1,63 @@
+{
+  "name": {
+    "family": "Your family name",
+    "given": "Your given name",
+    "full": "Your name",
+    "alternate": "Your alternate name",
+    "preferred": "Your name"
+  },
+  "phone": "Your phone",
+  "email": "you@example.com",
+  "location": {
+    "country": "Your country",
+    "region": "Your region",
+    "city": "Your city",
+    "postalCode": "Your postal code",
+    "countryAliases": ["Your country"],
+    "regionAliases": ["Your region"],
+    "cityAliases": ["Your city"]
+  },
+  "gender": "Your gender",
+  "genderAliases": ["Your gender"],
+  "atLeast18": "",
+  "workAuthorization": "",
+  "needsVisaSponsorship": "",
+  "summary": "Your summary.",
+  "skills": "Your full skills section.",
+  "educationText": "Your education.",
+  "education": [
+    {
+      "school": "Your school",
+      "aliases": ["your school"],
+      "dates": "Your dates",
+      "degreeLine": "Your degree"
+    }
+  ],
+  "experience": [
+    {
+      "company": "Your employer",
+      "aliases": ["your employer"],
+      "title": "Your title",
+      "location": "Your city",
+      "start": "Start date",
+      "end": "End date",
+      "description": "Your full job description for this role."
+    }
+  ],
+  "languages": [
+    {
+      "name": "Your language",
+      "level": "highest-on-form"
+    }
+  ],
+  "answerLanguage": "",
+  "browserLocale": "",
+  "customAnswers": [
+    {
+      "labelIncludes": ["example question"],
+      "value": "Your answer",
+      "note": "The field label must contain every phrase listed here."
+    }
+  ],
+  "notOnFile": ["Anything you have not entered in this file"]
+}
