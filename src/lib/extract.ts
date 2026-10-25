@@ -117,6 +117,22 @@ function isWizard(url: string, title: string, heading: string): boolean {
   return pathHit || copyHit;
 }
 
+function isLoginOverlay(text: string): boolean {
+  return /验证码|verification code|one-time code|扫码登录|密码登录|立即登录|sign in|log in/i.test(text);
+}
+
+async function overlayText(page: Page): Promise<string> {
+  return page.evaluate(`(() => {
+    const selectors = "[role=dialog], dialog, [class*='modal'], [class*='Modal'], [class*='dialog'], [class*='Dialog']";
+    return [...document.querySelectorAll(selectors)].map((node) => {
+      const style = window.getComputedStyle(node);
+      const box = node.getBoundingClientRect();
+      if (style.display === "none" || style.visibility === "hidden" || box.width < 40 || box.height < 40) return "";
+      return (node.innerText || "").replace(/\\s+/g, " ").trim();
+    }).filter(Boolean).join("\\n").slice(0, 2000);
+  })()`);
+}
+
 async function pageFlags(page: Page): Promise<{ submitted: boolean; mutated: boolean }> {
   return page.evaluate(
     "({ submitted: Boolean(window.__submitted || window.__runnerSubmitted), mutated: Boolean(window.__mutated) })",
@@ -213,10 +229,28 @@ export async function extractForm(startUrl: string, preferredLocale = ""): Promi
       const action = `Followed “${apply.label}”.`;
       const previous = page.url();
       page = await followApply(page, apply.locator);
+      await page
+        .locator("[role=dialog], dialog, [class*='modal'], [class*='Modal']")
+        .first()
+        .waitFor({ state: "visible", timeout: 2500 })
+        .catch(() => undefined);
       const flagsAfter = await pageFlags(page);
       submitted = submitted || flagsAfter.submitted;
       mutated = mutated || flagsAfter.mutated;
       hops.push({ url: page.url(), action });
+      const overlay = await overlayText(page);
+      if (isLoginOverlay(overlay)) {
+        stoppedBecause = "auth-wall";
+        warnings.push("Stopped. Applying opened a login wall. Passwords and codes are not filled in.");
+        questions = await readQuestions(page);
+        break;
+      }
+      if (isWizard(page.url(), await page.title(), overlay)) {
+        stoppedBecause = "wizard-diversion";
+        warnings.push("Stopped. This page is a profile wizard, not the job application.");
+        questions = await readQuestions(page);
+        break;
+      }
       if (page.url() === previous) {
         const appeared = await readQuestions(page);
         if (appeared.length < 3) {

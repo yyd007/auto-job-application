@@ -31,7 +31,21 @@ export async function buildPlan(rawUrl: string, profile: Profile): Promise<Appli
   if (extracted.stoppedBecause === "wizard-diversion") {
     answers = [];
   } else if (extracted.stoppedBecause === "auth-wall") {
-    answers = loginAnswers(extracted.questions);
+    answers = extracted.questions.length
+      ? loginAnswers(extracted.questions)
+      : [
+          {
+            id: "sign-in",
+            label: "Sign in",
+            section: "",
+            required: true,
+            kind: "login",
+            options: [],
+            status: "needs-user",
+            value: "",
+            source: "Applying opened a login wall. Passwords and codes are not entered.",
+          },
+        ];
   } else if (extracted.questions.length > 0) {
     answers = proposeAnswers(extracted.questions, profile);
   }

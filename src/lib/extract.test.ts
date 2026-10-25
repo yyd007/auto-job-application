@@ -90,6 +90,17 @@ describe("playwright runner", { concurrency: 1 }, () => {
     assert.match(plan.warnings.join(" "), /profile wizard/i);
   });
 
+  test("stops when apply opens a login dialog", { timeout: 60_000 }, async () => {
+    const plan = await buildPlan(`${origin}/fixtures/login-modal.html`, fixtureProfile);
+    assert.equal(plan.stoppedBecause, "auth-wall");
+    assert.equal(plan.applicationReached, false);
+    assert.equal(plan.submitted, false);
+    assert.equal(plan.mutated, false);
+    assert.match(plan.warnings.join(" "), /login wall/i);
+    assert.ok(plan.needsUser.some((answer) => /验证码|code/i.test(answer.label)));
+    assert.equal(plan.needsUser.every((answer) => answer.value === ""), true);
+  });
+
   test("stops on a login wall without typing", { timeout: 60_000 }, async () => {
     const plan = await buildPlan(`${origin}/fixtures/login.html`, fixtureProfile);
     assert.equal(plan.stoppedBecause, "auth-wall");
