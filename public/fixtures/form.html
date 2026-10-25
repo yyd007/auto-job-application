@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>申请表 - Measurement Strategist</title>
+  <script>
+    window.__mutated = false;
+    window.__submitted = false;
+    document.addEventListener("input", function () { window.__mutated = true; }, true);
+    document.addEventListener("click", function (event) {
+      var el = event.target.closest("a,button");
+      if (!el) return;
+      var label = (el.innerText || el.value || "").replace(/\s+/g, " ").trim();
+      if (label === "提交申请" || label === "提交" || label === "保存") window.__submitted = true;
+    }, true);
+  </script>
+</head>
+<body>
+  <h1>个人档案</h1>
+  <p>Shanghai, China</p>
+  <form autocomplete="off">
+    <p><a href="thanks.html">提交申请</a></p>
+    <label>姓氏 <input name="family" required /></label>
+    <label>名字 <input name="given" required /></label>
+    <label>电话号码 <input name="phone" type="tel" required /></label>
+    <label>电子邮件 <input name="email" type="email" required /></label>
+    <div>
+      <label for="verified">首选电子邮件地址</label>
+      <input id="verified" name="verifiedEmail" type="email" value="kept@example.com" readonly />
+      <span>已验证</span>
+    </div>
+    <label>国家/地区
+      <select name="country" required>
+        <option value="">请选择</option>
+        <option>中国</option>
+        <option>美国</option>
+      </select>
+    </label>
+    <label>省/直辖市/自治区 <input name="province" required /></label>
+    <label>城市 <input name="city" required /></label>
+    <label>邮政编码 <input name="postal" required /></label>
+    <label>区（可选） <input name="district" /></label>
+    <label>性别
+      <select name="gender" required>
+        <option value="">请选择</option>
+        <option>女</option>
+        <option>男</option>
+      </select>
+    </label>
+    <fieldset>
+      <legend>你是否年满 18 岁？</legend>
+      <label><input type="radio" name="age" value="是" required /> 是</label>
+      <label><input type="radio" name="age" value="否" /> 否</label>
+    </fieldset>
+    <fieldset>
+      <legend>你是否曾受雇于 Apple？</legend>
+      <label><input type="radio" name="employed" value="是" required /> 是</label>
+      <label><input type="radio" name="employed" value="否" /> 否</label>
+    </fieldset>
+    <fieldset>
+      <legend>你是否曾以临时派遣人员、顾问或独立合同员工身份为 Apple 工作过？</legend>
+      <label><input type="radio" name="contractor" value="是" required /> 是</label>
+      <label><input type="radio" name="contractor" value="否" /> 否</label>
+    </fieldset>
+    <fieldset>
+      <legend>你是否拥有在你所申请国家/地区合法工作的许可？</legend>
+      <label><input type="radio" name="auth" value="是" required /> 是</label>
+      <label><input type="radio" name="auth" value="否" /> 否</label>
+    </fieldset>
+    <fieldset>
+      <legend>你目前或将来是否需要公司为你提供工作签证担保？</legend>
+      <label><input type="radio" name="visa" value="是" required /> 是</label>
+      <label><input type="radio" name="visa" value="否" /> 否</label>
+    </fieldset>
+    <label>技能 <textarea name="skills" required></textarea></label>
+    <label>工作描述（eBest） <textarea name="ebest" required></textarea></label>
+    <label>英语熟练程度
+      <select name="english" required>
+        <option value="">请选择</option>
+        <option>流利</option>
+        <option>熟练</option>
+        <option>一般</option>
+      </select>
+    </label>
+    <label>期望薪资（必填） <input name="salary" required /></label>
+  </form>
+</body>
+</html>

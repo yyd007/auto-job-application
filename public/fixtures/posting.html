@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>测量策略师 - 示例职位</title>
+  <script>
+    window.__mutated = false;
+    window.__submitted = false;
+    document.addEventListener("input", function () { window.__mutated = true; }, true);
+    document.addEventListener("click", function (event) {
+      var el = event.target.closest("a,button");
+      if (!el) return;
+      var label = (el.innerText || el.value || "").replace(/\s+/g, " ").trim();
+      if (label === "提交申请" || label === "提交" || label === "保存") window.__submitted = true;
+    }, true);
+  </script>
+</head>
+<body>
+  <header>
+    <input type="search" name="q" placeholder="搜索职位" />
+  </header>
+  <h1>Measurement Strategist (Data Analyst)</h1>
+  <p>Shanghai, Shanghai, China</p>
+  <p><a href="thanks.html">提交申请</a></p>
+  <p><a id="apply" href="form.html">立即投递</a></p>
+</body>
+</html>

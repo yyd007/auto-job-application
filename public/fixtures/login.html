@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>登录 Apple 招聘纳才</title>
+  <script>
+    window.__mutated = false;
+    window.__submitted = false;
+    document.addEventListener("input", function () { window.__mutated = true; }, true);
+    document.addEventListener("click", function (event) {
+      var el = event.target.closest("a,button");
+      if (!el) return;
+      var label = (el.innerText || el.value || "").replace(/\s+/g, " ").trim();
+      if (label === "提交申请" || label === "提交" || label === "保存" || label === "继续") window.__submitted = true;
+    }, true);
+  </script>
+</head>
+<body>
+  <h1>登录</h1>
+  <form autocomplete="off">
+    <label>电子邮件或电话号码 <input type="email" name="account" /></label>
+    <label>密码 <input type="password" name="password" /></label>
+    <button type="submit">继续</button>
+  </form>
+</body>
+</html>
