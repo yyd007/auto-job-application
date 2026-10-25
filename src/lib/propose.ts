@@ -25,7 +25,7 @@ const YES_WORDS = ["yes", "true", "是", "有"];
 const NO_WORDS = ["no", "false", "否", "无", "不需要"];
 
 function norm(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
+  return value.replace(/\s+/g, " ").replace(/\*/g, "").trim();
 }
 
 function meaningfulOptions(options: string[]): string[] {
@@ -237,7 +237,7 @@ function proposeOne(question: ExtractedQuestion, profile: Profile): ProposedAnsw
     return yesNo(question, profile.atLeast18, source);
   }
 
-  if (/合法工作|工作许可|authorized to work|legally authorized|eligible to work|work authorization/i.test(label)) {
+  if (/合法工作|工作许可|authorized to work|legally authorized|eligible to work|work authorization|right to work/i.test(label)) {
     return yesNo(question, profile.workAuthorization, source);
   }
 
